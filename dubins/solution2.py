@@ -15,6 +15,10 @@ plt.style.use('ggplot')
 
 plot1 = True
 plot2 = not plot1
+
+if True:
+    plot1 = False
+    plot2 = False 
 dt = 1
 
 
@@ -27,17 +31,20 @@ def safe(x,y,car):
 
 
 
-def possiblePositions (car,current_node,previous_occurences):
+def possiblePositions (car,current_node,previous_occurences,mapGrid):
     currentX,currentY,currentTheta = current_node[0],current_node[1],current_node[2]
     check = True
     allowedPoints = []
+    upcomingPoint = []
     #print("new node")
     for angle in [0,math.pi/4,-math.pi/4]:
-        x,y,theta = step(car,currentX,currentY,angle,currentTheta,dt)
+        x,y,theta = step(car,currentX,currentY,currentTheta,angle,dt)
+        nextX,nextY,nextTheta = step(car,x,y,theta,angle,dt)
         #print ("angle: " , angle, "x,y,z: ", x,y,theta)
         result = [x,y,theta,angle]
+        nextResult = [nextX,nextY]
         allowedPoints.append(result)
-
+        upcomingPoint.append(nextResult)
         # if safe(result[0],result[1],car):
         #     while result[2] >= math.pi:
         #         result[2] -= 2*math.pi
@@ -52,7 +59,7 @@ def possiblePositions (car,current_node,previous_occurences):
         #     if(check):
         #         allowedPoints.append(result)
 
-    return allowedPoints
+    return allowedPoints, upcomingPoint
 
 
 class aStarNode():
@@ -68,7 +75,7 @@ class aStarNode():
 
     def __eq__(self, other):
         distance = math.sqrt((self.position[0] - other.position[0])**2 + (self.position[1]-other.position[1])**2)
-        return distance > 1
+        return distance >= dt
         #return round(self.position[0],1) == round(other.position[0],1) and round(self.position[1],1)== round(other.position[1],1) #and round(self.position[2],1)== round(other.position[2],1) 
     
     def distance(self,other):
@@ -76,15 +83,23 @@ class aStarNode():
 
 
 def gridCreator(car,start,end):
-    print("hi")
+
+    map_grid = []
+
+    for x in range (0,int(car.xt),dt):
+        for y in range (0,int(car.yt),dt):
+            map_grid.append([x,y,x+dt,y+dt,0])
+    #print (map_grid)
+    return map_grid
 
 
-
-def astar(car,start, end,controls,times):
+def astar(car,start, end,controls,times,mapGrid):
     """Returns a list of tuples as a path from the given start to the given end in the given maze"""
 
     # Create start and end node
     start_node = aStarNode(None, start)
+
+
     start_node.g = start_node.h = start_node.f = 0
     end_node = aStarNode(None, end)
     end_node.g = end_node.h = end_node.f = 0
@@ -93,7 +108,9 @@ def astar(car,start, end,controls,times):
     
     open_list = []
     closed_list = []
-
+    for gridBlock in mapGrid:
+        if gridBlock[2]>start_node.position[0]> gridBlock[0] and gridBlock[3]>start_node.position[1]> gridBlock[1]:
+            gridBlock[4]=1
     open_list.append(start_node)
     nodesX = []
     nodesY = []
@@ -118,7 +135,8 @@ def astar(car,start, end,controls,times):
 
         open_list.pop(current_index)
         closed_list.append(current_node)
-        print("open_list: ", len(open_list),"closed_list: ",len(closed_list))
+        
+        #print("open_list: ", len(open_list),"closed_list: ",len(closed_list))
         # Found the goal
         #print(current_node.position)
         if current_node.distance(end_node) <= within:
@@ -132,7 +150,7 @@ def astar(car,start, end,controls,times):
             return controls [::-1]  , times # Return reversed controls and times
 
         # Generate children
-        adjacentPoints = possiblePositions(car,current_node.position,open_list)
+        adjacentPoints,nextPoint = possiblePositions(car,current_node.position,open_list,mapGrid)
         #print(adjacentPoints)
         children = []
         nodesX.append(current_node.position[0])
@@ -155,11 +173,11 @@ def astar(car,start, end,controls,times):
             plt.pause(0.001)
 
 
-        for new_position in adjacentPoints:
+        for new_position,upcoming_position in zip(adjacentPoints,nextPoint):
 
             new_node = aStarNode(current_node, new_position)
 
-            if not safe(new_position[0],new_position[1],car):
+            if not safe(new_position[0],new_position[1],car) and (new_):
                 continue
 
             if (plot2):
@@ -173,7 +191,11 @@ def astar(car,start, end,controls,times):
                 ax.set_ylim(car.ylb, car.yub)
                 ax.set_aspect("equal")
                 plt.pause(0.001)
+                
             children.append(new_node)
+            for gridBlock in mapGrid:
+                if gridBlock[2]>new_node.position[0]> gridBlock[0] and gridBlock[3]>new_node.position[1]> gridBlock[1]:
+                    gridBlock[4]=1
 
         for child in children:
             # for closed_child in closed_list:
@@ -184,7 +206,8 @@ def astar(car,start, end,controls,times):
             #child.g = current_node.g + 1
             #child.g = math.sqrt(((child.position[0] - current_node.position[0]) ** 2) + ((child.position[1] - current_node.position[1]) ** 2))
             child.g = current_node.g + child.distance(current_node)
-            child.h = 1.2*child.distance(end_node)
+            child.h = 1.3*math.sqrt(((end_node.position[0] - upcoming_position[0]) ** 2) + ((end_node.position[1] - upcoming_position[1]) ** 2))
+            #child.h = 1.2*child.distance(end_node)
             #child.h = abs(child.position[0] - end_node.position[0]) + abs(child.position[1] - end_node.position[1])
             child.f = child.g + child.h
 
@@ -210,8 +233,8 @@ def solution(car):
     startPoint = (car.x0,car.y0,0,0)
     endPoint = (car.xt,car.yt)
 
-    #gridCreator(car,startPoint,endPoint)
-    controls,times=astar(car,startPoint, endPoint,controls,times)
+    mapGrid=gridCreator(car,startPoint,endPoint)
+    controls,times=astar(car,startPoint, endPoint,controls,times,mapGrid)
     print(controls,times)
     #print("length" ,len(controls),len(times))
     ''' <<< write your code above >>> '''

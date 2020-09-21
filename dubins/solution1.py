@@ -7,6 +7,7 @@
 from dubins import *
 import math
 from queue import *
+import time
 
 within = 0.5
 dt = 0.01
@@ -56,8 +57,11 @@ def bf_search(car, controls,times):
 
 def possiblePositions(car,xPos,yPos,headingAngle,stearingAngle,controls,times):
     cost = 0
+    print("new_node")
     for i in range(100 if stearingAngle == 0 else 157):
+        time.sleep(1)
         xPos, yPos, headingAngle = step(car,xPos, yPos, headingAngle, stearingAngle)
+        print ("angle: " , stearingAngle, "x,y,z: ", xPos,yPos,headingAngle)
         while headingAngle >= math.pi:
             headingAngle -= 2*math.pi
         while headingAngle <= -2*math.pi:
