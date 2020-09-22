@@ -16,7 +16,7 @@ import numpy as np
 from local.geometry_msgs import PoseStamped, Quaternion
 from local.sensor_msgs import LaserScan
 from local.map_msgs import OccupancyGridUpdate
-
+import time
 from grid_map import GridMap
 
 
@@ -158,6 +158,8 @@ class Mapping:
         robot_pos_r = [int(x/resolution) for x in robot_pos]
         obstacle_location = [0,0]
         obstacle_array = []
+        obstacle_x = []
+        obstacle_y = []
         for i, rangeData in enumerate(scan.ranges):
             if (rangeData <= scan.range_min or rangeData >= scan.range_max):
                 continue
@@ -168,39 +170,44 @@ class Mapping:
             y_location = int(((rangeData * sin(current_angle)) + robot_pos[1])/ resolution)
             obstacle_location = [x_location, y_location]
             obstacle_array.append(obstacle_location)
+            obstacle_x.append(x_location)
+            obstacle_y.append(y_location)
 
             free_spaces = self.raytrace(robot_pos_r,obstacle_location)
             for free_space in free_spaces:
-                currentValue = grid_map.__getitem__([free_space[0],free_space[1]])
-                if (currentValue<0):
-                    self.add_to_map(grid_map,free_space[0],free_space[1],self.free_space)
+                self.add_to_map(grid_map,free_space[0],free_space[1],self.free_space)
 
-            self.add_to_map(grid_map,obstacle_location[0],obstacle_location[1],self.occupied_space)
 
+
+        for obstacle in obstacle_array:
+            self.add_to_map(grid_map,obstacle[0],obstacle[1],self.occupied_space)
 
         """
         For C only!
         Fill in the update correctly below.
         """ 
+        #print(obstacle_array)
+        min_x , max_x = min(obstacle_x) , max(obstacle_x)
+        min_y , max_y = min(obstacle_y) , max(obstacle_y)
+
         # Only get the part that has been updated
         update = OccupancyGridUpdate()
-        # The minimum x index in 'grid_map' that has been updated
-        update.x = min(obstacle_array[0])
+        # The minimum x index in 'grid_map' that has been updated    
+        update.x = min_x
         # The minimum y index in 'grid_map' that has been updated
-        update.y = min(obstacle_array[1])
+        update.y = min_y
         # Maximum x index - minimum x index + 1
-        update.width = max(obstacle_array[0]) - update.x +1
+        update.width = max_x - min_x +1
         # Maximum y index - minimum y index + 1
-        update.height = max(obstacle_array[1]) - update.y +1
+        update.height = max_y - min_y +1
         # The map data inside the rectangle, in row-major order.
         update.data = []
         #print("x,y,w,h:",update.x,update.y,update.width,update.height)
         
-        for height in range (update.height):
-            for width in range(update.width):
-                itemValue = grid_map.__getitem__([update.x+width,update.y+height])
+        for y in range(min_y,max_y+1):
+            for x in range (min_x,max_x+1):
+                itemValue = grid_map[x,y]
                 update.data.append(itemValue)
-                #pass
 
         # Return the updated map together with only the
         # part of the map that has been updated
@@ -235,19 +242,31 @@ class Mapping:
         """
         Fill in your solution here
         """
-        h = grid_map.get_height()
-        w = grid_map.get_width()
-    
-        for i in range(h):
-            for j in range(w):
-                if grid_map[i,j] == self.occupied_space:  # grid is occupied
-                    for k in range(i - self.radius, i + self.radius):
-                        for l in range(j - self.radius, j + self.radius):
-                            #print(((i-k)**2 + (j-l)**2)**0.5)
-                            if (math.sqrt((i-k)**2 + (j-l)**2)) <= self.radius:
-                                if not(grid_map[k, l] == self.occupied_space):
-                                    #print('reached here!')                                   
-                                    self.add_to_map(grid_map, k, l, self.c_space)
-        
+        map_height = grid_map.get_height()
+        map_width = grid_map.get_width()
+
+        for width in range(map_width):
+            for height in range(map_height):
+                if grid_map[width,height] == self.occupied_space:
+                    circleArray = circle_list([width,height],self.radius)
+                    for circle in circleArray:
+                        if grid_map[circle[0], circle[1]]  != self.occupied_space:                                
+                            self.add_to_map(grid_map, circle[0], circle[1], self.c_space)
+
         # Return the inflated map
         return grid_map
+
+
+def circle_list (point,radius):
+    x, y = point
+    circleArray = []
+
+    for i in range (x-radius,x+radius):
+        for j in range (y-radius,y+radius):
+            if (sqrt((x-i)**2+(y-j)**2) <= radius):
+                circleArray.append([i,j])
+
+    return circleArray
+                
+
+                    
