@@ -1,5 +1,5 @@
 from dubins import evaluate
-from solution2 import *
+from solution import *
 try: import matplotlib.pyplot as plt; mpl=True
 except: mpl = False
 import os, json

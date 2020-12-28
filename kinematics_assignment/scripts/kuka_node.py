@@ -16,7 +16,7 @@ def main():
     rospy.init_node('kuka_node')
     rate = rospy.Rate(10)
     #the vertices of the square trajectory (in this case it will be a line)
-    vertices = [[-0.217, 0, 0.84], [-0.2, 0, 0.65], [-0.2, 0, 0.65], [-0.217, 0, 0.84]]
+    vertices = [[0.27, -0.15, 0], [0.57, -0.15, 0.1], [0.57, 0.15, 0.1], [0.27, 0.15, 0]]
     #the name of the robot's base frame
     base_frame = 'lwr_base_link'
 
@@ -75,3 +75,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    
