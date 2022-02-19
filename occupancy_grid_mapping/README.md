@@ -8,7 +8,7 @@ tay in the air.
 
 In many situations we cannot assume that the robot can be given a map in advance. Even if there are maps available, such as blueprints for a building, 
 they are not always useful for the robot and might be incorrect (too old, building collapsed, etc). Therefore it is of great benefit if the robot can 
-construct a map by itself from scratch, which is exactly what we will do in this assignment.
+construct a map by itself from scratch.
 
 
 Occupancy grid mapping is one of many mapping algorithms. Here the world is represented as a grid, where each cell of the grid corresponds to an area in the world.
